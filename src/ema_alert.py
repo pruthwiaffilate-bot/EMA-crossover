@@ -1,3 +1,4 @@
+import json
 import os
 from datetime import datetime, timezone
 from typing import List, Optional
@@ -5,8 +6,8 @@ from typing import List, Optional
 import requests
 
 
-TELEGRAM_BOT_TOKEN = os.getenv("8888857886:AAHZ261FUAbHTQoovVDWu7_Yj6UNWH04P14")
-TELEGRAM_CHAT_ID = os.getenv("938653686")
+TELEGRAM_BOT_TOKEN = os.getenv("TELEGRAM_BOT_TOKEN")
+TELEGRAM_CHAT_ID = os.getenv("TELEGRAM_CHAT_ID")
 DEFAULT_SYMBOLS = ["BTCUSDT", "ETHUSDT"]
 
 
@@ -84,6 +85,36 @@ def send_telegram_alert(message: str) -> bool:
     return True
 
 
+def should_alert(current_signal: Optional[str], previous_signal: Optional[str]) -> bool:
+    if current_signal is None:
+        return False
+    if previous_signal is None:
+        return True
+    return current_signal != previous_signal
+
+
+def get_last_signal(symbol: str) -> Optional[str]:
+    state_file = os.path.join(".state", f"{symbol.lower()}.json")
+    if not os.path.exists(state_file):
+        return None
+
+    try:
+        with open(state_file, "r", encoding="utf-8") as file:
+            data = json.load(file)
+            if not isinstance(data, str):
+                return None
+            return data
+    except Exception:
+        return None
+
+
+def save_last_signal(symbol: str, signal: str) -> None:
+    os.makedirs(".state", exist_ok=True)
+    state_file = os.path.join(".state", f"{symbol.lower()}.json")
+    with open(state_file, "w", encoding="utf-8") as file:
+        json.dump(signal, file)
+
+
 def evaluate_symbol(symbol: str) -> Optional[str]:
     prices = fetch_klines(symbol, interval="1h", limit=200)
     if len(prices) < 60:
@@ -94,9 +125,14 @@ def evaluate_symbol(symbol: str) -> Optional[str]:
     if signal is None:
         return None
 
+    previous_signal = get_last_signal(symbol)
+    if not should_alert(signal, previous_signal):
+        return None
+
     timestamp = datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M:%S UTC")
     message = f"<b>EMA Cross Alert</b>\nSymbol: {symbol}\nSignal: {signal.upper()}\nTime: {timestamp}"
     send_telegram_alert(message)
+    save_last_signal(symbol, signal)
     return signal
 
 
@@ -114,4 +150,4 @@ if __name__ == "__main__":
         if result:
             print(f"{symbol}: {result}")
         else:
-            print(f"{symbol}: no EMA crossover detected")
+            print(f"{symbol}: no fresh EMA crossover signal")
