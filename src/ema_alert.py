@@ -5,8 +5,8 @@ from typing import List, Optional
 import requests
 
 
-TELEGRAM_BOT_TOKEN = os.getenv("TELEGRAM_BOT_TOKEN")
-TELEGRAM_CHAT_ID = os.getenv("TELEGRAM_CHAT_ID")
+TELEGRAM_BOT_TOKEN = os.getenv("8888857886:AAHZ261FUAbHTQoovVDWu7_Yj6UNWH04P14")
+TELEGRAM_CHAT_ID = os.getenv("938653686")
 DEFAULT_SYMBOLS = ["BTCUSDT", "ETHUSDT"]
 
 
